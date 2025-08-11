@@ -65,3 +65,9 @@ updates:
       dev-deps:
         patterns: ["*"]
         update-types: ["patch"]
+
+  - target-branch: "qcom-next"
+    package-ecosystem: "github-actions" # See documentation for possible values
+    directory: "/" # This points to .github/workflows
+    schedule:
+      interval: "daily"
