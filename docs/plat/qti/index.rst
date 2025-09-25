@@ -7,6 +7,7 @@ Qualcomm Technologies, Inc.
 
    chrome
    msm8916
+   rb3gen2
 
 --------------
 
