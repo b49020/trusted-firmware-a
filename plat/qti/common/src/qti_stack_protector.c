@@ -8,8 +8,7 @@
 #include <stdint.h>
 
 #include <platform.h>
-#include <platform_def.h>
-#include <qti_rng.h>
+#include <drivers/qti/crypto/rng.h>
 #include <qtiseclib_interface.h>
 
 u_register_t plat_get_stack_protector_canary(void)
