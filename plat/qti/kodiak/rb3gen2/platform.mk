@@ -107,6 +107,12 @@ $(warning QTISECLIB_PATH is not provided while building, using stub implementati
 		Please refer to documentation for more details \
 		THIS FIRMWARE WILL NOT BOOT!)
 
+PLAT_QTI_SMMU_DRIVER	:=	1
+$(eval $(call add_define,PLAT_QTI_SMMU_DRIVER))
+
+BL31_SOURCES	+=	drivers/qti/smmu/smmu.c				\
+			drivers/qti/smmu/smmu_kodiak_cfg.c		
+
 include drivers/qti/accesscontrol/access_control.mk
 
 PLAT_INCLUDES	+=	-Iinclude/drivers/qti/sec_core/${CHIPSET} \

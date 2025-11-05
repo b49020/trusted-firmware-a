@@ -16,6 +16,7 @@
 #include <drivers/qti/accesscontrol/xpu.h>
 #include <drivers/qti/qtimer/qtimer.h>
 #include <drivers/qti/sec_core/sec_core.h>
+#include <drivers/qti/smmu/smmu.h>
 #include <drivers/qti/watchdog/watchdog.h>
 #include <lib/bl_aux_params/bl_aux_params.h>
 #include <lib/coreboot.h>
@@ -100,9 +101,9 @@ void bl31_platform_setup(void)
 #endif
 	generic_delay_timer_init();
 
-	/* Initialize the GIC driver, CPU and distributor interfaces */
 	plat_qti_gic_driver_init();
 	plat_qti_gic_init();
+	qti_smmu_init();
 	qti_interrupt_svc_init(bl32_image_ep_info.pc != 0);
 	qti_sec_core_init();
 	qti_qtimer_init();
