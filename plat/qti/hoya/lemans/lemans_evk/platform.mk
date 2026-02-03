@@ -54,12 +54,12 @@ DYNAMIC_WORKAROUND_CVE_2018_3639	:=      1
 ENABLE_STACK_PROTECTOR := strong
 
 PLAT_INCLUDES		:=	-Iinclude/plat/common/					\
-				-I${PLAT_PATH}/${CHIPSET}/inc				\
-				-I${PLAT_PATH}/${CHIPSET}/${PLAT}/inc			\
+				-I${PLAT_PATH}/hoya/${CHIPSET}/inc				\
+				-I${PLAT_PATH}/hoya/${CHIPSET}/${PLAT}/inc			\
 				-I${PLAT_PATH}/common/inc				\
 				-I${PLAT_PATH}/common/inc/$(ARCH)			\
-				-I${PLAT_PATH}/qtiseclib/inc				\
-				-I${PLAT_PATH}/qtiseclib/inc/${CHIPSET}
+				-I${PLAT_PATH}/hoya/qtiseclib/inc				\
+				-I${PLAT_PATH}/hoya/qtiseclib/inc/${CHIPSET}
 
 include lib/xlat_tables_v2/xlat_tables.mk
 PLAT_BL_COMMON_SOURCES	+=	common/desc_image_load.c				\
@@ -96,7 +96,7 @@ BL31_SOURCES		+=	drivers/delay_timer/generic_delay_timer.c		\
 				$(PLAT_PATH)/common/src/qti_topology.c			\
 				$(PLAT_PATH)/common/src/qti_pm.c			\
 				$(PLAT_PATH)/common/src/spmi_arb.c			\
-				$(PLAT_PATH)/qtiseclib/src/qtiseclib_cb_interface.c
+				$(PLAT_PATH)/hoya/qtiseclib/src/qtiseclib_cb_interface.c
 
 BL31_SOURCES	+=		drivers/qti/sec_core/sec_core_stub.c \
 				drivers/qti/qtimer/qtimer_stub.c \
@@ -111,7 +111,7 @@ ifeq ($(QTISECLIB_PATH),)
 $(warning QTISECLIB_PATH is not provided while building, using stub implementation. \
 		Please refer to documentation for more details \
 		THIS FIRMWARE WILL NOT BOOT!)
-BL31_SOURCES	+=	plat/qti/qtiseclib/src/qtiseclib_interface_stub.c
+BL31_SOURCES	+=	plat/qti/hoya/qtiseclib/src/qtiseclib_interface_stub.c
 else
 $(eval $(call add_define,QTISECLIB_PATH))
 # use library provided by QTISECLIB_PATH
