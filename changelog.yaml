@@ -568,6 +568,9 @@ subsections:
           - title: Lemans
             scope: lemans
 
+          - title: Lemans EVK
+            scope: lemans_evk
+
       - title: Raspberry Pi
         scope: rpi
 
