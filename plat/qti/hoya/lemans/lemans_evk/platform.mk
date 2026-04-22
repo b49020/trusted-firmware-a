@@ -105,6 +105,8 @@ $(warning QTISECLIB_PATH is not provided while building, using stub implementati
 		Please refer to documentation for more details \
 		THIS FIRMWARE WILL NOT BOOT!)
 
+include drivers/qti/smmu/smmu.mk
+
 PLAT_INCLUDES   +=      -Iinclude/drivers/qti/qtimer/${CHIPSET} \
 			-Iinclude/drivers/qti/watchdog/${CHIPSET}
 
@@ -113,6 +115,9 @@ BL31_SOURCES	+=	plat/qti/hoya/qtiseclib/src/qtiseclib_interface_stub.c \
 			drivers/qti/watchdog/watchdog.c
 
 else
+
+include drivers/qti/smmu/smmu.mk
+
 $(eval $(call add_define,QTISECLIB_PATH))
 # use library provided by QTISECLIB_PATH
 BL31_SOURCES	+=	drivers/qti/qtimer/qtimer_stub.c \
