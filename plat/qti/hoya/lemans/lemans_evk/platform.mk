@@ -113,6 +113,7 @@ include drivers/qti/smmu/smmu.mk
 include drivers/qti/pdc/pdc.mk
 include drivers/qti/pwr_utils/pwr_utils.mk
 include drivers/qti/rpmh/rpmh.mk
+include drivers/qti/clock/clock.mk
 
 PLAT_INCLUDES   +=      -Iinclude/drivers/qti/qtimer/${CHIPSET} \
 			-Iinclude/drivers/qti/watchdog/${CHIPSET}
