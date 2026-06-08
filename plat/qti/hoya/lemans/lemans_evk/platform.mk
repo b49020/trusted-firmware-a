@@ -102,7 +102,7 @@ BL31_SOURCES	+=		drivers/qti/sec_core/sec_core_stub.c \
 # for the platform back-end. ICB_NOC_BCM_VOTE=1 pulls in the ICB
 # micro-arbiter so the NoC bus rails are voted ON before the error
 # registers are programmed.
-ICB_NOC_BCM_VOTE	:=	0
+ICB_NOC_BCM_VOTE	:=	1
 include drivers/qti/icb/common/icb.mk
 
 include drivers/qti/smem/smem.mk
