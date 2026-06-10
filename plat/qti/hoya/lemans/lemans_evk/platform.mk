@@ -58,6 +58,8 @@ PLAT_INCLUDES		:=	-Iinclude/plat/common/					\
 				-I${PLAT_PATH}/hoya/qtiseclib/inc/${CHIPSET}
 
 include lib/xlat_tables_v2/xlat_tables.mk
+include drivers/qti/chipinfo/chipinfo.mk
+
 PLAT_BL_COMMON_SOURCES	+=	common/desc_image_load.c				\
 				drivers/qti/crypto/rng.c				\
 				lib/cpus/aarch64/cortex_a78c.S				\
@@ -98,7 +100,6 @@ BL31_SOURCES	+=		drivers/qti/sec_core/sec_core_stub.c \
 
 include drivers/qti/smem/smem.mk
 
->>>>>>> 67fabc03b (feat(lemans_evk): enable SMEM driver)
 # Override this on the command line to point to the qtiseclib library
 QTISECLIB_PATH ?=
 

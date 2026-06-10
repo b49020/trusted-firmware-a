@@ -3,4 +3,4 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-CHIPINFO_SOURCES	:=	drivers/qti/chipinfo/chipinfo.c
+BL31_SOURCES		+=	drivers/qti/chipinfo/chipinfo.c
