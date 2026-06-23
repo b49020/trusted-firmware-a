@@ -35,6 +35,11 @@ PSCI_OS_INIT_MODE			:=	1
 # GIC-600 configuration
 GICV3_SUPPORT_GIC600			:=	1
 
+# Use the native (hoya) PSCI CPU bringup + CPUCP clock-domain init instead of
+# the qtiseclib PSCI node machinery.
+QTI_PM_NATIVE				:=	1
+$(eval $(call add_define,QTI_PM_NATIVE))
+
 COLD_BOOT_SINGLE_CPU			:=	1
 PROGRAMMABLE_RESET_ADDRESS		:=	1
 
@@ -91,6 +96,7 @@ BL31_SOURCES		+=	drivers/delay_timer/generic_delay_timer.c		\
 				$(PLAT_PATH)/common/src/qti_syscall.c			\
 				$(PLAT_PATH)/common/src/qti_topology.c			\
 				$(PLAT_PATH)/common/src/qti_pm.c			\
+				$(PLAT_PATH)/common/src/qti_pm_hoya.c			\
 				$(PLAT_PATH)/common/src/spmi_arb.c			\
 				$(PLAT_PATH)/hoya/qtiseclib/src/qtiseclib_cb_interface.c
 
@@ -99,6 +105,7 @@ BL31_SOURCES	+=		drivers/qti/sec_core/sec_core_stub.c \
 
 include drivers/qti/smem/smem.mk
 include drivers/qti/chipinfo/chipinfo.mk
+include drivers/qti/cpucp/cpucp.mk
 
 # Override this on the command line to point to the qtiseclib library
 QTISECLIB_PATH ?=
