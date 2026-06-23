@@ -151,7 +151,12 @@ static int qti_cpu_power_on(u_register_t mpidr)
 		return PSCI_E_INVALID_PARAMS;
 	}
 
+#if QTI_PM_NATIVE
+	qti_pwr_domain_on(mpidr, core_pos);
+	return PSCI_E_SUCCESS;
+#else
 	return qtiseclib_psci_node_power_on(mpidr);
+#endif
 }
 
 static bool is_cpu_off(const psci_power_state_t *target_state)
@@ -170,7 +175,12 @@ static void qti_cpu_power_on_finish(const psci_power_state_t *target_state)
 {
 	const uint8_t *pwr_states =
 	    (const uint8_t *)target_state->pwr_domain_state;
+#if QTI_PM_NATIVE
+	(void)pwr_states;
+	qti_pwr_domain_on_finish(plat_my_core_pos());
+#else
 	qtiseclib_psci_node_on_finish(pwr_states);
+#endif
 
 	if (is_cpu_off(target_state)) {
 		plat_qti_gic_cpuif_enable();
@@ -288,7 +298,11 @@ int plat_setup_psci_ops(uintptr_t sec_entrypoint,
 
 	qti_sec_core_remap((uintptr_t)bl31_warm_entrypoint);
 
+#if QTI_PM_NATIVE
+	err = qti_psci_hoya_init((uintptr_t)bl31_warm_entrypoint);
+#else
 	err = qtiseclib_psci_init((uintptr_t)bl31_warm_entrypoint);
+#endif
 	if (err == PSCI_E_SUCCESS) {
 		*psci_ops = &plat_qti_psci_pm_ops;
 	}

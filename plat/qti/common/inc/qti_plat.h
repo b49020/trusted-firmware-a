@@ -56,6 +56,13 @@ void gic_set_spi_routing(unsigned int id, unsigned int irm, u_register_t mpidr);
 void qti_pmic_prepare_reset(void);
 void qti_pmic_prepare_shutdown(void);
 
+#if QTI_PM_NATIVE
+/* Native (hoya) PSCI CPU bringup, see qti_pm_hoya.c. */
+int qti_psci_hoya_init(uintptr_t entrypoint);
+void qti_pwr_domain_on(u_register_t mpidr, int core_pos);
+void qti_pwr_domain_on_finish(int core_pos);
+#endif
+
 typedef struct chip_id_info {
 	uint16_t jtag_id;
 	uint16_t chipinfo_id;
