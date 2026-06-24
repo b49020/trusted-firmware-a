@@ -55,9 +55,6 @@
 #define GOLD_PLL_SEQ_STS1_MEM_REPAIR_DONE	0x40U
 #define GOLD_PLL_SEQ_FORCE_PWR_CTL_MEM_REPAIR	0x4000U
 
-/* Reset vector base address register (APSS_SHARED). */
-#define APSS_SHARED_KRYO_RVBARADDR_LO		0x17e0001cU
-#define APSS_SHARED_KRYO_RVBARADDR_HI		0x17e00020U
 /*
  * Gold-cluster (APC1) SAW4 AVS rail. The qcs9075 SAW4 instance for the gold
  * rail is at 0x18101000, with the AVS register region at +0x800 and the status
@@ -251,22 +248,6 @@ static void gold_cluster_cold_boot(void)
 	udelay(GOLD_CLUSTER_SETTLE_US);
 
 	gold_cluster_booted = true;
-}
-
-/*
- * qti_psci_hoya_init - program the secondary-core reset vector.
- *
- * Secondary cores reset to the RVBAR programmed here, which must point at the
- * BL31 warm-boot entrypoint.
- */
-int qti_psci_hoya_init(uintptr_t entrypoint)
-{
-	mmio_write_32(APSS_SHARED_KRYO_RVBARADDR_LO,
-		      (uint32_t)(entrypoint >> 2));
-	mmio_write_32(APSS_SHARED_KRYO_RVBARADDR_HI,
-		      (uint32_t)(entrypoint >> 34));
-
-	return PSCI_E_SUCCESS;
 }
 
 /*

@@ -299,7 +299,7 @@ int plat_setup_psci_ops(uintptr_t sec_entrypoint,
 	qti_sec_core_remap((uintptr_t)bl31_warm_entrypoint);
 
 #if QTI_PM_NATIVE
-	err = qti_psci_hoya_init((uintptr_t)bl31_warm_entrypoint);
+	err = PSCI_E_SUCCESS;
 #else
 	err = qtiseclib_psci_init((uintptr_t)bl31_warm_entrypoint);
 #endif

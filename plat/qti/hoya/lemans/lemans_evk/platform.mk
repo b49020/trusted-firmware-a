@@ -100,7 +100,9 @@ BL31_SOURCES		+=	drivers/delay_timer/generic_delay_timer.c		\
 				$(PLAT_PATH)/common/src/spmi_arb.c			\
 				$(PLAT_PATH)/hoya/qtiseclib/src/qtiseclib_cb_interface.c
 
-BL31_SOURCES	+=		drivers/qti/sec_core/sec_core_stub.c
+PLAT_INCLUDES	+=	-Iinclude/drivers/qti/sec_core/${CHIPSET}
+
+BL31_SOURCES	+=	drivers/qti/sec_core/sec_core.c
 
 include drivers/qti/smem/smem.mk
 include drivers/qti/chipinfo/chipinfo.mk

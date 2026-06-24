@@ -58,7 +58,6 @@ void qti_pmic_prepare_shutdown(void);
 
 #if QTI_PM_NATIVE
 /* Native (hoya) PSCI CPU bringup, see qti_pm_hoya.c. */
-int qti_psci_hoya_init(uintptr_t entrypoint);
 void qti_pwr_domain_on(u_register_t mpidr, int core_pos);
 void qti_pwr_domain_on_finish(int core_pos);
 #endif
