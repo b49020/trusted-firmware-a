@@ -100,8 +100,7 @@ BL31_SOURCES		+=	drivers/delay_timer/generic_delay_timer.c		\
 				$(PLAT_PATH)/common/src/spmi_arb.c			\
 				$(PLAT_PATH)/hoya/qtiseclib/src/qtiseclib_cb_interface.c
 
-BL31_SOURCES	+=		drivers/qti/sec_core/sec_core_stub.c \
-				drivers/qti/accesscontrol/access_control_stub.c
+BL31_SOURCES	+=		drivers/qti/sec_core/sec_core_stub.c
 
 include drivers/qti/smem/smem.mk
 include drivers/qti/chipinfo/chipinfo.mk
@@ -122,6 +121,7 @@ $(warning QTISECLIB_PATH is not provided while building, using stub implementati
 # registers are programmed.
 ICB_NOC_BCM_VOTE	:=	1
 
+include drivers/qti/accesscontrol/access_control.mk
 include drivers/qti/smmu/smmu.mk
 include drivers/qti/pdc/pdc.mk
 include drivers/qti/pwr_utils/pwr_utils.mk
@@ -138,9 +138,12 @@ BL31_SOURCES	+=	plat/qti/hoya/qtiseclib/src/qtiseclib_interface_stub.c \
 
 else
 $(eval $(call add_define,QTISECLIB_PATH))
+$(eval $(call add_define,QTI_XPU_BYPASS))
 # use library provided by QTISECLIB_PATH
 BL31_SOURCES	+=	drivers/qti/qtimer/qtimer_stub.c \
-			drivers/qti/watchdog/watchdog_stub.c
+			drivers/qti/watchdog/watchdog_stub.c \
+			drivers/qti/accesscontrol/access_control_stub.c \
+			drivers/qti/accesscontrol/xpu.c
 
 LDFLAGS += -L $(dir $(QTISECLIB_PATH))
 LDLIBS += -l$(patsubst lib%.a,%,$(notdir $(QTISECLIB_PATH)))
