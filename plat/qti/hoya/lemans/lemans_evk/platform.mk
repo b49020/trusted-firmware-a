@@ -112,11 +112,6 @@ include drivers/qti/cpucp/cpucp.mk
 QTISECLIB_PATH ?=
 
 ifeq ($(QTISECLIB_PATH),)
-# if No lib then use stub implementation for qtiseclib interface
-$(warning QTISECLIB_PATH is not provided while building, using stub implementation. \
-		Please refer to documentation for more details \
-		THIS FIRMWARE WILL NOT BOOT!)
-
 # Build the NoC error logger driver. CHIPSET selects drivers/qti/icb/lemans
 # for the platform back-end. ICB_NOC_BCM_VOTE=1 pulls in the ICB
 # micro-arbiter so the NoC bus rails are voted ON before the error
