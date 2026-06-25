@@ -56,6 +56,19 @@
 DEFINE_RENAME_SYSREG_RW_FUNCS(cpu_pwrctrl_val, S3_0_C15_C2_7)
 
 const unsigned int qti_pm_idle_states[] = {
+#if QTI_PM_NATIVE
+	/*
+	 * The native PSCI port does not yet implement the firmware
+	 * power-collapse (LPM) sequence, so a CPU cannot be physically powered
+	 * down by EL3 alone. Advertise only CPU-level standby (retention),
+	 * entered with a simple WFI and handled by qti_cpu_standby(). This is
+	 * "standard Arm WFI" CPU idle and is safe alongside the OP-TEE SPD,
+	 * which cannot tolerate the PSCI power-down abandon path that a
+	 * non-collapsing WFI would otherwise trigger.
+	 */
+	qti_make_pwrstate_lvl0(QTI_LOCAL_STATE_STB,
+			       PSTATE_TYPE_STANDBY),
+#else
 	qti_make_pwrstate_lvl0(QTI_LOCAL_STATE_OFF,
 			       PSTATE_TYPE_POWERDOWN),
 	qti_make_pwrstate_lvl0(QTI_LOCAL_STATE_DEEPOFF,
@@ -72,6 +85,7 @@ const unsigned int qti_pm_idle_states[] = {
 			       QTI_LOCAL_STATE_DEEPOFF,
 			       QTI_LOCAL_STATE_DEEPOFF,
 			       PSTATE_TYPE_POWERDOWN),
+#endif
 	0,
 };
 
@@ -189,6 +203,25 @@ static void qti_cpu_power_on_finish(const psci_power_state_t *target_state)
 
 static void qti_cpu_standby(plat_local_state_t cpu_state)
 {
+	u_register_t scr;
+
+	assert(cpu_state == QTI_LOCAL_STATE_STB);
+
+	/*
+	 * Put the CPU into the standby retention state with a WFI. Route
+	 * physical IRQs to EL3 so that a pending non-secure interrupt wakes the
+	 * CPU, then restore SCR_EL3 on wake-up so the interrupt is handled in
+	 * the non-secure world as usual.
+	 */
+	scr = read_scr_el3();
+	write_scr_el3(scr | SCR_IRQ_BIT);
+	isb();
+
+	dsb();
+	wfi();
+
+	write_scr_el3(scr);
+	isb();
 }
 
 static void qti_node_power_off(const psci_power_state_t *target_state)
