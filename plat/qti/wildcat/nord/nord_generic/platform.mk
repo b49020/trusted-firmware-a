@@ -144,5 +144,9 @@ BL31_SOURCES		+=	drivers/qti/qtimer/qtimer.c
 PLAT_INCLUDES		+=	-Iinclude/drivers/qti/watchdog/${CHIPSET}
 BL31_SOURCES		+=	drivers/qti/watchdog/watchdog.c
 
+# CPUCP host driver: notify CPUCP of per-core power-state changes during
+# PSCI CPU_ON (see qti_pwr_domain_on() in qti_pm_wildcat.c).
+include drivers/qti/cpucp/cpucp.mk
+
 # SoC drivers pulled in-tree for the Wildcat Nord build.
 include drivers/qti/pdc/pdc.mk

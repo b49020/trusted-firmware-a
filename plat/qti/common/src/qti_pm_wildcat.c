@@ -14,6 +14,7 @@
 #include <lib/psci/psci.h>
 #include <plat/common/platform.h>
 
+#include <cpucp.h>
 #include <qti_plat.h>
 
 /*
@@ -180,6 +181,18 @@ void qti_pwr_domain_on(u_register_t mpidr, int core_pos)
 	nord_ncc_power_on_core(base, core);
 	dsbsy();
 	isb();
+
+	/*
+	 * Notify CPUCP that this core has just powered on, matching the
+	 * downstream reference PSCI implementation
+	 * (core/power/psci/src/asic/<target>/asic_nodes.c cpu_trigger_on() ->
+	 * cpucp_cluster_core_power_on()). The native NCC_ARCH bring-up above
+	 * does not otherwise tell CPUCP anything about core power state, so
+	 * without this CPUCP's view of which cores are running never updates.
+	 * Best-effort: the core is already up regardless of whether CPUCP
+	 * acknowledges the notification.
+	 */
+	cpucp_notify_core_power_on(core, cluster);
 }
 
 /*
