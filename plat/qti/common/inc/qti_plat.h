@@ -66,6 +66,9 @@ int  qti_pwr_psci_init(uintptr_t warmboot_entry);
 void qti_plat_bl31_setup_post(void);
 void qti_plat_invoke_unhandled_isr(uint32_t id, void *handle);
 
+/* Per-target APSS Interrupt Unit (INTU) bring-up (see nord_intu.c). */
+void plat_intu_init(void);
+
 typedef struct chip_id_info {
 	uint16_t jtag_id;
 	uint16_t chipinfo_id;

@@ -12,6 +12,14 @@
 
 void qti_plat_bl31_setup_post(void)
 {
+	/*
+	 * Bring up the APSS INTU so peripheral SPIs (UFS SPI265/INTID297, geni
+	 * 615, RSC 61) reach the GIC-700. Downstream CPUSS sysini programs the
+	 * per-SPI level/edge type; our stub did not, so level SPIs never
+	 * delivered. Runs before bl31_plat_runtime_setup() enables G1NS SPI
+	 * forwarding at the distributor.
+	 */
+	plat_intu_init();
 }
 
 /*******************************************************************************
