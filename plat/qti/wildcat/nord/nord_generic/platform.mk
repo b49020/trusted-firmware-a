@@ -126,3 +126,6 @@ BL31_SOURCES		+=	drivers/qti/sec_core/sec_core_nord.c
 # qti_qtimer_init()/qti_watchdog_init().
 BL31_SOURCES		+=	drivers/qti/qtimer/qtimer_stub.c			\
 				drivers/qti/watchdog/watchdog_stub.c
+
+# APSS Interrupt Unit (INTU) per-SPI type configuration.
+BL31_SOURCES		+=	$(PLAT_PATH)/wildcat/${CHIPSET}/src/nord_intu.c
