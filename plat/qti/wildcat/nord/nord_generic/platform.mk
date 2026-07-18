@@ -23,7 +23,10 @@ ARM_RECOM_STATE_ID_ENC			:=	1
 PSCI_OS_INIT_MODE			:=	1
 
 # GIC-700 configuration
-GICV3_SUPPORT_GIC600			:=	0
+GIC_ENABLE_V4_EXTN			:= 1
+GIC_EXT_INTID				:= 1
+
+GICV3_SUPPORT_GIC600			:= 1
 
 # Route the BL31 console to the physical GENI UART (UART_BASE_ADDR=0x884000)
 # so EL3 NOTICE/INFO logs appear on the serial console.
@@ -115,9 +118,8 @@ BL31_SOURCES		+=	drivers/delay_timer/generic_delay_timer.c		\
 				$(PLAT_PATH)/common/src/spmi_arb.c			\
 				drivers/qti/accesscontrol/access_control_stub.c
 
-# Secondary-core remap stub; replaced by the real sec_core config when the
-# Oryon cores are brought up.
-BL31_SOURCES		+=	drivers/qti/sec_core/sec_core_stub.c
+# Secondary-core remap for the Oryon cores.
+BL31_SOURCES		+=	drivers/qti/sec_core/sec_core_nord.c
 
 # Timer and watchdog stubs; replaced by the real drivers once the qtimer and
 # watchdog configuration is added. The common BL31 setup always calls
