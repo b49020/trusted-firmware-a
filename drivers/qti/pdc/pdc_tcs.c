@@ -39,8 +39,6 @@ static void pdc_tcs_write_cmd(uint32_t base, uint16_t tcs_num, uint16_t cmd_num,
 		PDC_TCS_WAIT_CMPL_WRITE(base, tcs_num, tmp);
 	}
 
-	config->cmd.resource_p = &g_pdc_resource_list[config->cmd.index];
-
 	PDC_TCS_ADDR_WRITE(base, tcs_num, cmd_num,
 			   config->cmd.resource_p->base_addr +
 			   config->data.addr_offset);
@@ -57,16 +55,25 @@ void pdc_tcs_initialize(void)
 	uint32_t n_res;
 	uint32_t n_cmd;
 	uint32_t base_addr;
+	struct pdc_tcs_resource *resource_p;
 	struct pdc_tcs_config *cmd_data;
 
 	assert(total_tcs <= TCS_NUM_TOTAL);
 
+	/*
+	 * Resolve every resource's cmd_db address before programming any TCS
+	 * command. Matches the downstream TZ driver (pdcTcs_initialize()):
+	 * a resource whose lookup fails must NOT abort programming the rest
+	 * of the TCS commands - several board variants share one resource
+	 * list across configs that don't all populate every resource in
+	 * cmd_db, so one miss here is expected, not fatal. The resource's
+	 * base_addr is left at its static-init value of 0 on failure.
+	 */
 	for (n_res = 0U; n_res < TCS_TOTAL_RESOURCE_NUM; n_res++) {
 		base_addr = cmd_db_query_addr(g_pdc_resource_list[n_res].name);
-		if (base_addr == 0U) {
-			return;
+		if (base_addr != 0U) {
+			g_pdc_resource_list[n_res].base_addr += base_addr;
 		}
-		g_pdc_resource_list[n_res].base_addr += base_addr;
 	}
 
 	assert(PDC_PARAM_TCS_CMDS(base) == NUM_COMMANDS_PER_TCS);
@@ -77,6 +84,22 @@ void pdc_tcs_initialize(void)
 			cmd_data = &g_pdc_tcs_config[n_tcs][n_cmd];
 
 			if ((cmd_data->data.options & TCS_CFG_OPT_NOT_USED) != 0U) {
+				continue;
+			}
+
+			resource_p = &g_pdc_resource_list[cmd_data->cmd.index];
+			cmd_data->cmd.resource_p = resource_p;
+
+			/*
+			 * Match the downstream TZ driver
+			 * (pdcTcs_writeCmd()): a resource whose cmd_db
+			 * lookup failed (base_addr still 0) must not have
+			 * any command registers programmed for it, and its
+			 * TCS command slot must not be enabled - writing/
+			 * enabling a bogus address-0 command is worse than
+			 * leaving the slot at its register reset state.
+			 */
+			if (resource_p->base_addr == 0U) {
 				continue;
 			}
 

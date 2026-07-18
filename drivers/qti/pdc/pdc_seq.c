@@ -98,8 +98,18 @@ static enum pdc_seq_result pdc_seq_copy_cmd_seq(struct pdc_seq *seq)
 	for (i = 0U; i < seq->mode_count; i++) {
 		curr = &seq->modes[i];
 
+		/*
+		 * length==0 (cmds==NULL) means the mode's microcode is
+		 * programmed at runtime by AOP, not this driver - matches
+		 * the downstream TZ pdc_seq_hal_bsp_mode_t convention (see
+		 * e.g. seq/cfg/nord/pdc_seq_cfg.c, every Nord mode has
+		 * cmds=NULL "Sequence Programming by AOP"). Nothing to copy;
+		 * leave start_addr untouched (its static initializer, 0, is
+		 * inert here since nothing in this codebase currently
+		 * triggers PDC low-power-mode entry via start_addr/branch_mask).
+		 */
 		if (curr->length == 0U) {
-			return PDC_SEQ_INVALID_PARAM;
+			continue;
 		}
 
 		for (j = 0U; j < i; j++) {

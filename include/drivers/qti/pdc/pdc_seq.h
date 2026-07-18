@@ -27,10 +27,15 @@ struct pdc_seq_cfg {
 
 /* Low power mode descriptor */
 struct pdc_seq_mode {
-	uint8_t		*cmds;
-	uint16_t	length;
+	uint8_t		*cmds;		/* NULL if AOP programs this mode's
+					 * microcode at runtime instead of
+					 * this driver at init time
+					 */
+	uint16_t	length;		/* 0 if cmds == NULL */
 	uint16_t	mode_id;
-	int16_t		start_addr;	/* filled in at init */
+	int16_t		start_addr;	/* filled in at init, unused if
+					 * length == 0
+					 */
 };
 
 /* Per-instance PDC sequencer descriptor */
