@@ -169,9 +169,22 @@ void gicv3_spis_config_defaults(uintptr_t gicd_base)
 	num_ints = gicv3_get_spi_limit(gicd_base);
 	INFO("Maximum SPI INTID supported: %u\n", num_ints - 1);
 
-	/* Treat all (E)SPIs as G1NS by default. We do 32 at a time. */
+	/*
+	 * Treat all (E)SPIs as G1NS by default. We do 32 at a time.
+	 *
+	 * The GICv3 spec says IGRPMODR is don't-care when IGROUPR=1, so most
+	 * implementations reset IGRPMODR to 0 and the omission is harmless.
+	 * However some GIC implementations (e.g. GIC-700 on certain SoCs)
+	 * reset IGRPMODR to all-ones, which leaves SPIs in Group-1 Secure
+	 * despite IGROUPR=1, silently blocking non-secure interrupt delivery.
+	 * Write IGRPMODR=0 alongside IGROUPR=~0 to guarantee G1NS regardless
+	 * of reset state.
+	 */
 	for (i = MIN_SPI_ID; i < num_ints; i += (1U << IGROUPR_SHIFT)) {
-		gicd_write_igroupr(gicv3_get_multichip_base(i, gicd_base), i, ~0U);
+		uintptr_t base = gicv3_get_multichip_base(i, gicd_base);
+
+		gicd_write_igroupr(base, i, ~0U);
+		gicd_write_igrpmodr(base, i, 0U);
 	}
 
 #if GIC_EXT_INTID
@@ -181,7 +194,10 @@ void gicv3_spis_config_defaults(uintptr_t gicd_base)
 
 		for (i = MIN_ESPI_ID; i < num_eints;
 					i += (1U << IGROUPR_SHIFT)) {
-			gicd_write_igroupr(gicv3_get_multichip_base(i, gicd_base), i, ~0U);
+			uintptr_t base = gicv3_get_multichip_base(i, gicd_base);
+
+			gicd_write_igroupr(base, i, ~0U);
+			gicd_write_igrpmodr(base, i, 0U);
 		}
 	} else {
 		INFO("ESPI range is not implemented.\n");
@@ -312,8 +328,13 @@ void gicv3_ppi_sgi_config_defaults(uintptr_t gicr_base)
 
 	/* 32 interrupt IDs per GICR_IGROUPR register */
 	for (i = 0U; i < ppi_regs_num; ++i) {
-		/* Treat all SGIs/(E)PPIs as G1NS by default */
+		/* Treat all SGIs/(E)PPIs as G1NS by default. Clear IGRPMODR
+		 * explicitly: some GIC implementations (e.g. GIC-700) reset it
+		 * to all-ones, leaving PPIs/SGIs in Group-1 Secure despite
+		 * IGROUPR=1 and preventing the NS kernel from receiving them.
+		 */
 		gicr_write_igroupr(gicr_base, i, ~0U);
+		gicr_write_igrpmodr(gicr_base, i, 0U);
 	}
 
 	/* 4 interrupt IDs per GICR_IPRIORITYR register */
