@@ -13,6 +13,18 @@
 void qti_plat_bl31_setup_post(void)
 {
 	/*
+	 * Mask TME_WDOG_EXPIRED (and defensively PDC_WDOG_EXPIRED) at the final
+	 * MPM_PS_HOLD_MASK gate. The direct TME_WDOG disable does NOT prevent
+	 * TME_WDOG_EXPIRED from being observed set - A/B boot testing confirms
+	 * this mask is what actually stops the ~12s cold-boot PS_HOLD reset.
+	 * Bring-up mitigation, not a safety-compliant fix: it masks the reset
+	 * request rather than resolving why TME still asserts it.
+	 */
+	mmio_clrbits_32(QTI_MPM_PS_HOLD_MASK,
+			QTI_MPM_PS_HOLD_MASK_TME_WDOG_EXPIRED |
+			QTI_MPM_PS_HOLD_MASK_PDC_WDOG_EXPIRED);
+
+	/*
 	 * Bring up the APSS INTU so peripheral SPIs (UFS SPI265/INTID297, geni
 	 * 615, RSC 61) reach the GIC-700. Downstream CPUSS sysini programs the
 	 * per-SPI level/edge type; our stub did not, so level SPIs never

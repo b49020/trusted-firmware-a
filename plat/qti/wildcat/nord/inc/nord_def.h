@@ -207,6 +207,22 @@
 /* AOSS registers (MPM_POWER_STATE_HOLD_REG_BASE) */
 /*----------------------------------------------------------------------------*/
 #define QTI_PS_HOLD_REG				0x0C264000
+/*
+ * MPM_PS_HOLD_MASK (QTI_PS_HOLD_REG + 0x4): bit1 TME_WDOG_EXPIRED, bit2
+ * PDC_WDOG_EXPIRED, bit0 SECONDARY_DIE_PS_HOLD_ARES (IPCAT-verified, chip
+ * 781). Boot-tested (2026-07-06): with TME_WDOG_ENABLE disabled directly
+ * (see bl31_platform_setup) TME_WDOG_EXPIRED is STILL observed set at
+ * cold-boot BL31 entry - the direct disable races the boundary condition
+ * that latches TME's fatal/expired status, it does not prevent it. Masking
+ * bit1 here is what actually stops the ~12s PS_HOLD reset (A/B verified:
+ * removing this mask reproduces the reset every time; restoring it removes
+ * it every time). bit2 (PDC_WDOG_EXPIRED) reads 0 at this point on this
+ * board/config - included defensively since it gates through the same
+ * register and costs nothing to mask.
+ */
+#define QTI_MPM_PS_HOLD_MASK			(QTI_PS_HOLD_REG + 0x4U)
+#define QTI_MPM_PS_HOLD_MASK_TME_WDOG_EXPIRED	U(0x2)
+#define QTI_MPM_PS_HOLD_MASK_PDC_WDOG_EXPIRED	U(0x4)
 /*----------------------------------------------------------------------------*/
 /* AOP CMD DB address space for mapping (ipcat_ddr.xml AOP_CMD_DB_P)          */
 /*----------------------------------------------------------------------------*/
