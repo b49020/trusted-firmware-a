@@ -496,6 +496,17 @@ CPU_FLAG_LIST += ERRATA_C1NANO_3754876
 CPU_FLAG_LIST += ERRATA_DSU_798953
 CPU_FLAG_LIST += ERRATA_DSU_936184
 CPU_FLAG_LIST += ERRATA_DSU_2313941
+
+# Flag to apply erratum QCCE-326 workaround during reset. This erratum
+# applies only to Qualcomm Oryon-1 ("Phoenix Gen1") cores at MIDR variant/
+# revision r3p0, r4p0, r3p4 or r4p4 (Pakala Large/Medium V1 and R2).
+CPU_FLAG_LIST += ERRATA_ORYON_QCCE_326
+
+# Flag to apply DSU erratum 2900952 during reset. This erratum applies
+# to some implementations of DSU-120 revision r2p0. Erratum might be fixed
+# in some implementations of r2p0. This can be determined by reading
+# the IMP_CLUSTERREVIDR_EL1 register where a set bit indicates that
+# the erratum is fixed in this part. It is fixed in r2p1.
 CPU_FLAG_LIST += ERRATA_DSU_2900952
 
 # process all flags
