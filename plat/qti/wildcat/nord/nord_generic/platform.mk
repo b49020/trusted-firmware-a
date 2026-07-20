@@ -121,10 +121,6 @@ BL31_SOURCES		+=	drivers/delay_timer/generic_delay_timer.c		\
 # Secondary-core remap for the Oryon cores.
 BL31_SOURCES		+=	drivers/qti/sec_core/sec_core_nord.c
 
-# Watchdog stub; replaced by the real driver once the watchdog configuration
-# is added. The common BL31 setup always calls qti_watchdog_init().
-BL31_SOURCES		+=	drivers/qti/watchdog/watchdog_stub.c
-
 # APSS Interrupt Unit (INTU) per-SPI type configuration.
 BL31_SOURCES		+=	$(PLAT_PATH)/wildcat/${CHIPSET}/src/nord_intu.c
 
@@ -132,3 +128,6 @@ BL31_SOURCES		+=	$(PLAT_PATH)/wildcat/${CHIPSET}/src/nord_intu.c
 PLAT_INCLUDES		+=	-Iinclude/drivers/qti/qtimer/${CHIPSET}
 BL31_SOURCES		+=	drivers/qti/qtimer/qtimer.c
 
+# Secure watchdog.
+PLAT_INCLUDES		+=	-Iinclude/drivers/qti/watchdog/${CHIPSET}
+BL31_SOURCES		+=	drivers/qti/watchdog/watchdog.c
