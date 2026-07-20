@@ -131,3 +131,6 @@ BL31_SOURCES		+=	drivers/qti/sec_core/sec_core_stub.c
 # qti_qtimer_init()/qti_watchdog_init().
 BL31_SOURCES		+=	drivers/qti/qtimer/qtimer_stub.c			\
 				drivers/qti/watchdog/watchdog_stub.c
+
+# SoC drivers pulled in-tree for the Wildcat Nord build.
+include drivers/qti/pdc/pdc.mk
