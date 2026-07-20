@@ -135,3 +135,6 @@ BL31_SOURCES		+=	drivers/qti/watchdog/watchdog.c
 # CPUCP host driver: notify CPUCP of per-core power-state changes during
 # PSCI CPU_ON (see plat_qti_pwr_domain_on() in wildcat_pm.c).
 include drivers/qti/cpucp/cpucp.mk
+
+# SMMU configuration.
+include drivers/qti/smmu/smmu.mk
