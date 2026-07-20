@@ -148,5 +148,8 @@ BL31_SOURCES		+=	drivers/qti/watchdog/watchdog.c
 # PSCI CPU_ON (see qti_pwr_domain_on() in qti_pm_wildcat.c).
 include drivers/qti/cpucp/cpucp.mk
 
+# SMMU configuration.
+include drivers/qti/smmu/smmu.mk
+
 # SoC drivers pulled in-tree for the Wildcat Nord build.
 include drivers/qti/pdc/pdc.mk
