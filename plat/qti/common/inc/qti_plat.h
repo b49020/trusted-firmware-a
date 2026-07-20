@@ -56,6 +56,16 @@ void gic_set_spi_routing(unsigned int id, unsigned int irm, u_register_t mpidr);
 void qti_pmic_prepare_reset(void);
 void qti_pmic_prepare_shutdown(void);
 
+void qti_pwr_domain_on(u_register_t mpidr, int core_pos);
+void qti_pwr_domain_on_finish(int core_pos, const uint8_t *states);
+void qti_pwr_domain_off(const uint8_t *states);
+void qti_pwr_domain_suspend(const uint8_t *states);
+void qti_pwr_domain_suspend_finish(const uint8_t *states);
+int  qti_pwr_psci_init(uintptr_t warmboot_entry);
+
+void qti_plat_bl31_setup_post(void);
+void qti_plat_invoke_unhandled_isr(uint32_t id, void *handle);
+
 typedef struct chip_id_info {
 	uint16_t jtag_id;
 	uint16_t chipinfo_id;

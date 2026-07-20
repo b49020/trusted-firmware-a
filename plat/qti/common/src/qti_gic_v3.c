@@ -11,96 +11,22 @@
 #include <platform.h>
 #include <platform_def.h>
 #include <qti_plat.h>
-#include <qtiseclib_defs.h>
-#include <qtiseclib_defs_plat.h>
 
 /* The GICv3 driver only needs to be initialized in EL3 */
 static uintptr_t rdistif_base_addrs[PLATFORM_CORE_COUNT];
 
-/* Array of interrupts to be configured by the gic driver */
-static const interrupt_prop_t qti_interrupt_props[] = {
-	INTR_PROP_DESC(QTISECLIB_INT_ID_CPU_WAKEUP_SGI,
-		       GIC_HIGHEST_SEC_PRIORITY, INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-	INTR_PROP_DESC(QTISECLIB_INT_ID_RESET_SGI, GIC_HIGHEST_SEC_PRIORITY,
-		       INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-	INTR_PROP_DESC(QTISECLIB_INT_ID_SEC_WDOG_BARK, GIC_HIGHEST_SEC_PRIORITY,
-		       INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-	INTR_PROP_DESC(QTISECLIB_INT_ID_NON_SEC_WDOG_BITE,
-		       GIC_HIGHEST_SEC_PRIORITY, INTR_GROUP0,
-		       GIC_INTR_CFG_LEVEL),
-	INTR_PROP_DESC(QTISECLIB_INT_ID_VMIDMT_ERR_CLT_SEC,
-		       GIC_HIGHEST_SEC_PRIORITY, INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-	INTR_PROP_DESC(QTISECLIB_INT_ID_VMIDMT_ERR_CLT_NONSEC,
-		       GIC_HIGHEST_SEC_PRIORITY, INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-	INTR_PROP_DESC(QTISECLIB_INT_ID_VMIDMT_ERR_CFG_SEC,
-		       GIC_HIGHEST_SEC_PRIORITY, INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-	INTR_PROP_DESC(QTISECLIB_INT_ID_VMIDMT_ERR_CFG_NONSEC,
-		       GIC_HIGHEST_SEC_PRIORITY, INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-	INTR_PROP_DESC(QTISECLIB_INT_ID_XPU_SEC, GIC_HIGHEST_SEC_PRIORITY,
-		       INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-	INTR_PROP_DESC(QTISECLIB_INT_ID_XPU_NON_SEC, GIC_HIGHEST_SEC_PRIORITY,
-		       INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-#ifdef QTISECLIB_INT_ID_A1_NOC_ERROR
-	INTR_PROP_DESC(QTISECLIB_INT_ID_A1_NOC_ERROR, GIC_HIGHEST_SEC_PRIORITY,
-		       INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-#endif
-#ifdef QTISECLIB_INT_ID_A2_NOC_ERROR
-	INTR_PROP_DESC(QTISECLIB_INT_ID_A2_NOC_ERROR, GIC_HIGHEST_SEC_PRIORITY,
-		       INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-#endif
-#ifdef QTISECLIB_INT_ID_CONFIG_NOC_ERROR
-	INTR_PROP_DESC(QTISECLIB_INT_ID_CONFIG_NOC_ERROR,
-		       GIC_HIGHEST_SEC_PRIORITY, INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-#endif
-#ifdef QTISECLIB_INT_ID_DC_NOC_ERROR
-	INTR_PROP_DESC(QTISECLIB_INT_ID_DC_NOC_ERROR, GIC_HIGHEST_SEC_PRIORITY,
-		       INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-#endif
-#ifdef QTISECLIB_INT_ID_MEM_NOC_ERROR
-	INTR_PROP_DESC(QTISECLIB_INT_ID_MEM_NOC_ERROR, GIC_HIGHEST_SEC_PRIORITY,
-		       INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-#endif
-#ifdef QTISECLIB_INT_ID_SYSTEM_NOC_ERROR
-	INTR_PROP_DESC(QTISECLIB_INT_ID_SYSTEM_NOC_ERROR,
-		       GIC_HIGHEST_SEC_PRIORITY, INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-#endif
-#ifdef QTISECLIB_INT_ID_MMSS_NOC_ERROR
-	INTR_PROP_DESC(QTISECLIB_INT_ID_MMSS_NOC_ERROR,
-		       GIC_HIGHEST_SEC_PRIORITY, INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-#endif
-#ifdef QTISECLIB_INT_ID_LPASS_AGNOC_ERROR
-	INTR_PROP_DESC(QTISECLIB_INT_ID_LPASS_AGNOC_ERROR, GIC_HIGHEST_SEC_PRIORITY,
-		       INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-#endif
-#ifdef QTISECLIB_INT_ID_NSP_NOC_ERROR
-	INTR_PROP_DESC(QTISECLIB_INT_ID_NSP_NOC_ERROR, GIC_HIGHEST_SEC_PRIORITY,
-		       INTR_GROUP0,
-		       GIC_INTR_CFG_EDGE),
-#endif
-};
+/*
+ * Array of secure interrupts to be configured by the GIC driver. The contents
+ * are architecture-specific (the interrupt IDs differ per SoC), so the table
+ * and its length are supplied by the platform layer.
+ */
+extern const interrupt_prop_t qti_interrupt_props[];
+extern const unsigned int qti_interrupt_props_num;
 
-const gicv3_driver_data_t qti_gic_data = {
+static gicv3_driver_data_t qti_gic_data = {
 	.gicd_base = QTI_GICD_BASE,
 	.gicr_base = QTI_GICR_BASE,
 	.interrupt_props = qti_interrupt_props,
-	.interrupt_props_num = ARRAY_SIZE(qti_interrupt_props),
 	.rdistif_num = PLATFORM_CORE_COUNT,
 	.rdistif_base_addrs = rdistif_base_addrs,
 	.mpidr_to_core_pos = plat_qti_core_pos_by_mpidr
@@ -108,6 +34,13 @@ const gicv3_driver_data_t qti_gic_data = {
 
 void plat_qti_gic_driver_init(void)
 {
+	/*
+	 * The interrupt property table is supplied by the platform layer; its
+	 * length is an extern const (not a compile-time constant), so wire it
+	 * in at runtime before initialising the driver.
+	 */
+	qti_gic_data.interrupt_props_num = qti_interrupt_props_num;
+
 	/*
 	 * The GICv3 driver is initialized in EL3 and does not need
 	 * to be initialized again in SEL1. This is because the S-EL1
@@ -129,7 +62,7 @@ void plat_qti_gic_init(void)
 	gicv3_cpuif_enable(plat_my_core_pos());
 
 	/* Route secure spi interrupt to ANY. */
-	for (i = 0; i < ARRAY_SIZE(qti_interrupt_props); i++) {
+	for (i = 0; i < qti_interrupt_props_num; i++) {
 		unsigned int int_id = qti_interrupt_props[i].intr_num;
 
 		if (plat_ic_is_spi(int_id)) {
