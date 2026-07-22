@@ -16,6 +16,7 @@
 #include <drivers/qti/accesscontrol/xpu.h>
 #include <drivers/qti/chipinfo/chipinfo.h>
 #include <drivers/qti/pdc/pdc.h>
+#include <drivers/qti/qti_smem/qti_smem.h>
 #include <drivers/qti/qtimer/qtimer.h>
 #include <drivers/qti/sec_core/sec_core.h>
 #include <drivers/qti/smmu/smmu.h>
@@ -96,6 +97,9 @@ void bl31_platform_setup(void)
 	plat_qti_gic_driver_init();
 	plat_qti_gic_init();
 	qti_pdc_init();
+	if (qti_smem_init() != 0) {
+		ERROR("SMEM initialization error\n");
+	}
 	if (qti_chipinfo_init() != CHIPINFO_SUCCESS) {
 		WARN("ChipInfo initialization error\n");
 	}

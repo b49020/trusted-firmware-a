@@ -55,7 +55,7 @@ PLAT_INCLUDES		:=	-Iinclude/plat/common/					\
 
 include lib/xlat_tables_v2/xlat_tables.mk
 include drivers/qti/chipinfo/chipinfo.mk
-include drivers/qti/smem/smem.mk
+include drivers/qti/qti_smem/qti_smem.mk
 
 PLAT_BL_COMMON_SOURCES	+=	common/desc_image_load.c				\
 				drivers/qti/crypto/rng.c				\

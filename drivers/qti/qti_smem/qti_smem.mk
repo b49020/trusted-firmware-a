@@ -7,7 +7,7 @@
 PLAT_DRIVERS_PATH :=	drivers/qti
 
 PLAT_INCLUDES	+=	-Iinclude/drivers/qti \
-			-Iinclude/drivers/qti/smem
+			-Iinclude/drivers/qti/qti_smem
 
-BL31_SOURCES	+=	$(PLAT_DRIVERS_PATH)/smem/smem.c \
-			$(PLAT_DRIVERS_PATH)/smem/smem_partition.c
+BL31_SOURCES	+=	$(PLAT_DRIVERS_PATH)/qti_smem/qti_smem.c \
+			$(PLAT_DRIVERS_PATH)/qti_smem/qti_smem_plat.c

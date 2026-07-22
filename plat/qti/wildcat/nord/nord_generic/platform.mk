@@ -110,7 +110,7 @@ BL2_SOURCES		+=	drivers/io/io_fip.c					\
 
 include drivers/arm/gic/v3/gicv3.mk
 include drivers/qti/chipinfo/chipinfo.mk
-include drivers/qti/smem/smem.mk
+include drivers/qti/qti_smem/qti_smem.mk
 BL31_SOURCES		+=	drivers/delay_timer/generic_delay_timer.c		\
 				drivers/delay_timer/delay_timer.c			\
 				plat/common/plat_gicv3.c				\
