@@ -41,4 +41,12 @@ struct pdc_tcs_config {
 
 void pdc_tcs_initialize(void);
 
+/*
+ * Optional platform hook, called by pdc_tcs_initialize() after resource
+ * command-DB addresses are resolved and before the TCS commands are written.
+ * Default is a weak no-op; a platform may override g_pdc_tcs_config levels
+ * (res_val) with command-DB-derived values here.
+ */
+void pdc_tcs_plat_resolve_levels(void);
+
 #endif /* PDC_TCS_H */

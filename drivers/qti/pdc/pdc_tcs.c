@@ -17,6 +17,18 @@
 extern struct pdc_tcs_config	g_pdc_tcs_config[TCS_NUM_TOTAL][NUM_COMMANDS_PER_TCS];
 extern struct pdc_tcs_resource	g_pdc_resource_list[TCS_TOTAL_RESOURCE_NUM];
 
+/*
+ * Optional platform hook to resolve/override TCS command levels (res_val)
+ * before the commands are written to hardware. A platform that derives its
+ * wake/MOL rail corners from the AOP command DB (via pwr_utils) provides a
+ * strong definition; the default is a no-op, so platforms that hardcode their
+ * levels in g_pdc_tcs_config are unaffected.
+ */
+#pragma weak pdc_tcs_plat_resolve_levels
+void pdc_tcs_plat_resolve_levels(void)
+{
+}
+
 static void pdc_tcs_write_cmd(uint32_t base, uint16_t tcs_num, uint16_t cmd_num,
 			      struct pdc_tcs_config *config)
 {
@@ -75,6 +87,12 @@ void pdc_tcs_initialize(void)
 			g_pdc_resource_list[n_res].base_addr += base_addr;
 		}
 	}
+
+	/*
+	 * Let the platform override any hardcoded TCS levels with values
+	 * derived from the command DB (no-op by default).
+	 */
+	pdc_tcs_plat_resolve_levels();
 
 	assert(PDC_PARAM_TCS_CMDS(base) == NUM_COMMANDS_PER_TCS);
 	assert(total_tcs <= PDC_PARAM_TCS_COUNT(base));
