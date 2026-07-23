@@ -136,6 +136,9 @@ BL31_SOURCES		+=	drivers/qti/sec_core/sec_core_nord.c
 # APSS Interrupt Unit (INTU) per-SPI type configuration.
 BL31_SOURCES		+=	$(PLAT_PATH)/wildcat/${CHIPSET}/src/nord_intu.c
 
+# RPMH_MPU_XPU4: grant HLOS (AP-NonSecure) access to the RPMh register space.
+BL31_SOURCES		+=	$(PLAT_PATH)/wildcat/${CHIPSET}/src/nord_xpu.c
+
 # Architected timer (qtimer).
 PLAT_INCLUDES		+=	-Iinclude/drivers/qti/qtimer/${CHIPSET}
 BL31_SOURCES		+=	drivers/qti/qtimer/qtimer.c

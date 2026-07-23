@@ -32,6 +32,15 @@ void qti_plat_bl31_setup_post(void)
 	 * forwarding at the distributor.
 	 */
 	plat_intu_init();
+
+	/*
+	 * Grant HLOS (AP-NonSecure / DRV-2) access to the RPMh register space
+	 * via RPMH_MPU_XPU4. BL31 (AP-Secure) can already vote RPMh; if the boot
+	 * firmware left the RPMh MPU's UMR AP-NS permission clear, non-secure
+	 * RPMh votes are blocked - the asymmetry behind the DRV-2 ACTIVE-TCS
+	 * timeout. The before/after UMRPERM value is logged.
+	 */
+	nord_rpmh_mpu_grant_hlos();
 }
 
 /*******************************************************************************

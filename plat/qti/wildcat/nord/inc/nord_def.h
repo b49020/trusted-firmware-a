@@ -272,4 +272,20 @@
 #define TFA_SHARED_MEMORY_BASE			0x85100000
 #define TFA_SHARED_MEMORY_SIZE			0x00001000
 /*----------------------------------------------------------------------------*/
+/* RPMH_MPU_XPU4 - the XPU4 MPU guarding the RPMh register space.             */
+/*                                                                            */
+/* The RPMh MPU has no region groups; access is governed by its unmapped-     */
+/* region permission register (UMRPERMREG @ base+0x408). Setting the          */
+/* AP-NonSecure QAD (UMR_NS[30] + QAD0[0]) gives HLOS/DRV-2 R+W to the RPMh    */
+/* register space. NORD_XPU4_UMR_PERM_HLOS also keeps AP-Secure (UMR_S[31]),  */
+/* matching the downstream Nord value AC_DOMAIN_AP_NS_BIT|AC_DOMAIN_APPS_SEC.  */
+/* Base confirmed via IPCAT RPMH_MPU_XPU4_IDR0 @ 0x0C292000; UMRPERMREG @      */
+/* 0x0C292408 (RW, RMSK 0xC00007FF).                                          */
+/*----------------------------------------------------------------------------*/
+#define NORD_RPMH_MPU_XPU4_BASE			0x0C292000U
+#define NORD_XPU4_IDR0_OFFSET			0x000U
+#define NORD_XPU4_REV_OFFSET			0x00CU
+#define NORD_XPU4_UMRPERMREG_OFFSET		0x408U
+#define NORD_XPU4_UMR_PERM_HLOS			0xC0000001U
+/*----------------------------------------------------------------------------*/
 #endif /* NORD_DEF_H */

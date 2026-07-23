@@ -69,6 +69,9 @@ void qti_plat_invoke_unhandled_isr(uint32_t id, void *handle);
 /* Per-target APSS Interrupt Unit (INTU) bring-up (see nord_intu.c). */
 void plat_intu_init(void);
 
+/* Grant HLOS (AP-NonSecure) access to RPMh via RPMH_MPU_XPU4 (see nord_xpu.c). */
+void nord_rpmh_mpu_grant_hlos(void);
+
 typedef struct chip_id_info {
 	uint16_t jtag_id;
 	uint16_t chipinfo_id;
