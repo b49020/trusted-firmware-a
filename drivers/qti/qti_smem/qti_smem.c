@@ -58,6 +58,22 @@
 #define QTI_SMEM_ITEM_CANARY 0xa5a5U
 
 /*
+ * Legacy (non-partitioned) SMEM allocation table.
+ *
+ * Some QTI SoCs (e.g. Nord) publish SMEM in the legacy format: there is no
+ * partition TOC at the tail of the region; instead a fixed allocation table
+ * sits immediately after the static header. Each entry is indexed by SMEM
+ * item id and records whether the item is allocated and its byte offset from
+ * the SMEM base. This matches the layout the boot firmware (XBL) writes and
+ * that EDK2's SmemLib / the downstream TZ smem_legacy driver read.
+ *
+ * The table begins QTI_SMEM_ALLOC_TABLE_OFFSET (0xD0) bytes into SMEM:
+ *   proc_comm[16] (64B) + ver[32] (128B) + heap_info (16B) = 208 = 0xD0.
+ */
+#define QTI_SMEM_ALLOC_TABLE_OFFSET 0xD0U
+#define QTI_SMEM_ALLOC_ENTRY_ALLOCATED 1U
+
+/*
  * BOOT SMEM version constants.
  *
  * The BOOT SMEM version word is stored at index QTI_SMEM_VERSION_BOOT_OFFSET
@@ -207,6 +223,21 @@ struct qti_smem_item_header {
 	uint32_t reserved; /* reserved; not validated                    */
 } QTI_SMEM_PACKED;
 
+/*
+ * struct qti_smem_alloc_entry - one entry in the legacy allocation table.
+ *
+ * The table (at QTI_SMEM_ALLOC_TABLE_OFFSET) is indexed by SMEM item id.
+ * A base_ext of 0 means the item lives in the SMEM region itself, at
+ * SMEM base + offset; a non-zero base_ext denotes external memory, which
+ * this driver does not resolve.
+ */
+struct qti_smem_alloc_entry {
+	uint32_t allocated; /* QTI_SMEM_ALLOC_ENTRY_ALLOCATED if in use */
+	uint32_t offset; /* byte offset of item data from SMEM base  */
+	uint32_t size; /* item data size in bytes                  */
+	uint32_t base_ext; /* external base (0 = within SMEM region)   */
+} QTI_SMEM_PACKED;
+
 /* Compile-time size assertions - catch layout regressions immediately. */
 _Static_assert(sizeof(struct qti_smem_static_header) == 192U,
 	       "qti_smem_static_header size mismatch");
@@ -218,6 +249,8 @@ _Static_assert(sizeof(struct qti_smem_partition_header) == 32U,
 	       "qti_smem_partition_header size mismatch");
 _Static_assert(sizeof(struct qti_smem_item_header) == 16U,
 	       "qti_smem_item_header size mismatch");
+_Static_assert(sizeof(struct qti_smem_alloc_entry) == 16U,
+	       "qti_smem_alloc_entry size mismatch");
 
 /* -----------------------------------------------------------------------
  * Driver state
@@ -230,6 +263,7 @@ _Static_assert(sizeof(struct qti_smem_item_header) == 16U,
  */
 struct qti_smem_info {
 	int initialized; /* 0 = uninitialized, 1 = initialized */
+	int legacy_only; /* 1 = no partition TOC; use legacy table */
 	qti_smem_host_t local_host; /* local host ID                      */
 	uint16_t max_items; /* maximum item ID (exclusive)        */
 	uint32_t smem_size; /* total SMEM size in bytes           */
@@ -844,20 +878,36 @@ int qti_smem_init(void)
 	/* Memory barrier before reading shared-memory metadata. */
 	qti_smem_plat_mem_barrier();
 
-	/* Step 6: validate the TOC header. */
-	ret = smem_validate_toc_header(toc, &num_entries);
-	if (ret != 0)
-		return ret;
-
 	/*
-	 * Populate qti_smem_info fields needed by smem_validate_toc_entry(),
-	 * smem_part_involves_local(), and smem_map_partitions() before
-	 * calling them.
+	 * Populate the fields needed by every lookup path (including the
+	 * legacy fallback below) before validating the partition TOC.
 	 */
 	qti_smem_info.local_host = plat_info.local_host;
 	qti_smem_info.max_items = plat_info.max_items;
 	qti_smem_info.smem_size = smem_size;
 	qti_smem_info.toc_offset = toc_offset;
+
+	/*
+	 * Step 6: validate the partition TOC header.
+	 *
+	 * Legacy-format SMEM (e.g. Nord) has no partition TOC at the tail of
+	 * the region - the magic reads back as zero. That is not an error:
+	 * fall back to legacy-only mode, where lookups resolve items from the
+	 * fixed allocation table at QTI_SMEM_ALLOC_TABLE_OFFSET instead.
+	 */
+	ret = smem_validate_toc_header(toc, &num_entries);
+	if (ret != 0) {
+		QTI_SMEM_PLAT_LOG_DBG(
+			"smem: no partition TOC (%d); using legacy allocation table\n",
+			ret);
+		qti_smem_info.legacy_only = 1;
+		qti_smem_info.num_toc_entries = 0U;
+		qti_smem_info.common_part_offset = 0U;
+		qti_smem_info.common_part_size = 0U;
+		qti_smem_info.initialized = 1;
+		return 0;
+	}
+
 	qti_smem_info.num_toc_entries = num_entries;
 
 	/*
@@ -876,6 +926,75 @@ int qti_smem_init(void)
 
 	/* Step 8: mark driver as initialized. */
 	qti_smem_info.initialized = 1;
+
+	return 0;
+}
+
+/*
+ * smem_legacy_lookup() - Resolve an item via the legacy allocation table.
+ *
+ * Used when SMEM has no partition TOC (legacy_only). Reads the fixed
+ * allocation-table entry for @item at QTI_SMEM_ALLOC_TABLE_OFFSET and, if the
+ * item is allocated within the SMEM region, returns its address and size.
+ * Mirrors EDK2 SmemLib and the downstream TZ smem_legacy get_addr.
+ *
+ * Return:
+ *   0        item found; *addr and *size set
+ *  -ENOENT   item not allocated
+ *  -EIO      allocation table or item bounds invalid
+ *  -EPERM    SMEM base not mapped
+ */
+static int smem_legacy_lookup(uint16_t item, void **addr, size_t *size)
+{
+	const struct qti_smem_alloc_entry *entry;
+	void *base_va;
+	void *tbl_va;
+	uint32_t off;
+	uint32_t sz;
+	uint32_t ext;
+	uint32_t tbl_off;
+
+	/* Allocation table must lie within the mapped BOOT info page. */
+	tbl_off = QTI_SMEM_ALLOC_TABLE_OFFSET +
+		  (uint32_t)item * (uint32_t)sizeof(struct qti_smem_alloc_entry);
+	if ((uint64_t)tbl_off + sizeof(struct qti_smem_alloc_entry) >
+	    (uint64_t)QTI_SMEM_BOOT_INFO_SIZE) {
+		return -EIO;
+	}
+
+	base_va = qti_smem_plat_get_addr(0U);
+	if (base_va == NULL)
+		return -EPERM;
+
+	tbl_va = (void *)((uint8_t *)base_va + tbl_off);
+	entry = (const struct qti_smem_alloc_entry *)tbl_va;
+
+	/* Memory barrier before reading shared-memory metadata. */
+	qti_smem_plat_mem_barrier();
+
+	if (smem_rd32(&entry->allocated) != QTI_SMEM_ALLOC_ENTRY_ALLOCATED)
+		return -ENOENT;
+
+	/* base_ext != 0 means the item lives in external memory; unsupported. */
+	ext = smem_rd32(&entry->base_ext);
+	if (ext != 0U)
+		return -ENOENT;
+
+	off = smem_rd32(&entry->offset);
+	sz = smem_rd32(&entry->size);
+
+	/* Validate the item data lies fully within the SMEM region. */
+	if ((sz == 0U) ||
+	    ((uint64_t)off + (uint64_t)sz > (uint64_t)qti_smem_info.smem_size)) {
+		QTI_SMEM_PLAT_LOG_ERR(
+			"smem: legacy item %u bad bounds off=%u size=%u\n",
+			(unsigned int)item, (unsigned int)off, (unsigned int)sz);
+		return -EIO;
+	}
+
+	*addr = (void *)((uint8_t *)base_va + off);
+	if (size != NULL)
+		*size = (size_t)sz;
 
 	return 0;
 }
@@ -913,6 +1032,13 @@ int qti_smem_lookup(qti_smem_host_t remote_host, uint16_t item,
 
 	if ((uint32_t)item >= (uint32_t)qti_smem_info.max_items)
 		return -EINVAL;
+
+	/*
+	 * Legacy SMEM: no partition TOC exists, so all items live in the
+	 * legacy allocation table regardless of host. Resolve directly.
+	 */
+	if (qti_smem_info.legacy_only != 0)
+		return smem_legacy_lookup(item, item_ptr, item_size);
 
 	/*
 	 * Fast path: common partition lookup.
