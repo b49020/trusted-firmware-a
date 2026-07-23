@@ -7,6 +7,9 @@
 #include <drivers/arm/gicv3.h>
 #include <lib/mmio.h>
 
+#include <common/debug.h>
+#include <drivers/qti/cmd_db/cmd_db.h>
+#include <drivers/qti/pwr_utils/pwr_utils_lvl.h>
 #include <platform_def.h>
 #include <qti_plat.h>
 
@@ -32,6 +35,34 @@ void qti_plat_bl31_setup_post(void)
 	 * forwarding at the distributor.
 	 */
 	plat_intu_init();
+
+	/*
+	 * Build the SW-corner (vlvl) -> HW-level (hlvl) tables from the AOP
+	 * command DB. cmd-db is already initialized by qti_pdc_init().
+	 */
+	pwr_utils_lvl_init();
+
+	/*
+	 * DIAGNOSTIC (temporary, bring-up): the Nord PDC wake TCS hardcodes the
+	 * rail hlvls (cx=2 "min_svs", mx=2 "NOM", xo=3 "ON"). Log the values the
+	 * AOP cmd-db actually maps for those corners so we can confirm the
+	 * hardcoded indices are correct - a mismatch (or a "len=0", meaning
+	 * cmd-db has no table for the rail) is a concrete lead on the RPMh
+	 * ACTIVE-TCS wake handshake. Remove once the PDC config is switched to
+	 * these derived values.
+	 */
+	NOTICE("pwr_utils: cx.lvl len=%u hlvl(MIN_SVS)=%d (pdc hardcodes 2)\n",
+	       cmd_db_query_len("cx.lvl"),
+	       pwr_utils_hlvl_named_resource("cx.lvl",
+					     RAIL_VOLTAGE_LEVEL_MIN_SVS, NULL));
+	NOTICE("pwr_utils: mx.lvl len=%u hlvl(NOM)=%d (pdc hardcodes 2)\n",
+	       cmd_db_query_len("mx.lvl"),
+	       pwr_utils_hlvl_named_resource("mx.lvl",
+					     RAIL_VOLTAGE_LEVEL_NOM, NULL));
+	NOTICE("pwr_utils: xo.lvl len=%u hlvl(ON)=%d (pdc hardcodes 3)\n",
+	       cmd_db_query_len("xo.lvl"),
+	       pwr_utils_hlvl_named_resource("xo.lvl",
+					     0x80 /* XO_LEVEL_ON */, NULL));
 }
 
 /*******************************************************************************

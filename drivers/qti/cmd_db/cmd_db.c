@@ -85,7 +85,14 @@ static uint64_t res_id_to_u64(const char *res_id)
 	return val;
 }
 
-uint32_t cmd_db_query_addr(const char *res_id)
+/*
+ * Locate a cmd-db entry by resource id. On success returns the entry and, if
+ * info_out is non-NULL, the owning slave-id info block (needed to resolve the
+ * aux-data region). Returns NULL if the DB is uninitialized or the id is not
+ * found.
+ */
+static const struct cmd_db_entry *cmd_db_find_entry(
+	const char *res_id, const struct cmd_db_slv_id_info **info_out)
 {
 	uint64_t key;
 	unsigned int slv;
@@ -94,12 +101,12 @@ uint32_t cmd_db_query_addr(const char *res_id)
 	const struct cmd_db_entry *entry;
 
 	if (res_id == NULL) {
-		return 0U;
+		return NULL;
 	}
 
 	if (g_cmd_db == NULL) {
 		if (cmd_db_init() != 0) {
-			return 0U;
+			return NULL;
 		}
 	}
 
@@ -119,10 +126,67 @@ uint32_t cmd_db_query_addr(const char *res_id)
 				 idx * sizeof(struct cmd_db_entry));
 
 			if (entry->res_id == key) {
-				return entry->addr;
+				if (info_out != NULL) {
+					*info_out = info;
+				}
+				return entry;
 			}
 		}
 	}
 
-	return 0U;
+	return NULL;
+}
+
+uint32_t cmd_db_query_addr(const char *res_id)
+{
+	const struct cmd_db_slv_id_info *info;
+	const struct cmd_db_entry *entry;
+
+	entry = cmd_db_find_entry(res_id, &info);
+	if (entry == NULL) {
+		return 0U;
+	}
+
+	return entry->addr;
+}
+
+uint32_t cmd_db_query_len(const char *res_id)
+{
+	const struct cmd_db_slv_id_info *info;
+	const struct cmd_db_entry *entry;
+
+	entry = cmd_db_find_entry(res_id, &info);
+	if (entry == NULL) {
+		return 0U;
+	}
+
+	return entry->len;
+}
+
+int cmd_db_query_aux_data(const char *res_id, uint8_t *len, uint8_t *buf)
+{
+	const struct cmd_db_slv_id_info *info;
+	const struct cmd_db_entry *entry;
+	const uint8_t *aux;
+	uint16_t copy_len;
+
+	if ((res_id == NULL) || (len == NULL) || (buf == NULL)) {
+		return -1;
+	}
+
+	entry = cmd_db_find_entry(res_id, &info);
+	if (entry == NULL) {
+		return -1;
+	}
+
+	/* Copy at most the caller-provided buffer size. */
+	copy_len = (*len < entry->len) ? *len : entry->len;
+
+	/* Aux data lives at data + slave data_offset + entry offset. */
+	aux = g_cmd_db->data + info->data_offset + entry->offset;
+
+	memcpy(buf, aux, copy_len);
+	*len = (uint8_t)copy_len;
+
+	return 0;
 }

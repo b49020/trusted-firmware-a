@@ -153,3 +153,7 @@ include drivers/qti/smmu/smmu.mk
 
 # SoC drivers pulled in-tree for the Wildcat Nord build.
 include drivers/qti/pdc/pdc.mk
+
+# Power-utils: SW-corner (vlvl) <-> HW-level (hlvl) conversion via cmd-db.
+# Depends on the cmd_db driver pulled in by pdc.mk above.
+include drivers/qti/pwr_utils/pwr_utils.mk
