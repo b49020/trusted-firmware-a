@@ -127,8 +127,13 @@ BL31_SOURCES		+=	drivers/delay_timer/generic_delay_timer.c		\
 				$(PLAT_PATH)/common/src/qti_pm.c			\
 				$(PLAT_PATH)/common/src/qti_pm_wildcat.c		\
 				$(PLAT_PATH)/common/src/qti_syscall.c			\
-				$(PLAT_PATH)/common/src/spmi_arb.c			\
-				drivers/qti/accesscontrol/access_control_stub.c
+				$(PLAT_PATH)/common/src/spmi_arb.c
+
+# Access control: program the XPU v4 MPUs from the compiled-in Nord policy.
+PLAT_INCLUDES		+=	-Idrivers/qti/accesscontrol/xpu
+BL31_SOURCES		+=	drivers/qti/accesscontrol/access_control_nord.c		\
+				drivers/qti/accesscontrol/xpu/xpu4.c			\
+				drivers/qti/accesscontrol/xpu/nord/xpu_config.c
 
 # Secondary-core remap for the Oryon cores.
 BL31_SOURCES		+=	drivers/qti/sec_core/sec_core_nord.c
