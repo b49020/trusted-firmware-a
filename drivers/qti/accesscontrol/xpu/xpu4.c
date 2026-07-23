@@ -16,6 +16,8 @@
 #include <lib/mmio.h>
 #include <lib/utils_def.h>
 
+#include <nord_def.h>
+#include <qti_interrupt_svc.h>
 #include <xpu4.h>
 
 /* Global registers (offset from instance base). */
@@ -24,6 +26,17 @@
 #define XPU4_REV		0x00CU	/* MAJOR[31:28], MINOR[27:16]       */
 #define XPU4_CFGOWNER		0x404U
 #define XPU4_UMRPERMREG		0x408U
+
+/* Error-reporting + syndrome registers (offset from instance base). */
+#define XPU4_CLERE		0x20CU	/* client error reporting enable    */
+#define XPU4_ESR		0x500U	/* error status: CLERR/CFGERR/multi */
+#define XPU4_SYNAR0		0x504U	/* faulting address lo              */
+#define XPU4_SYNAR1		0x508U	/* faulting address hi              */
+
+#define XPU4_CLERE_S		BIT(31)	/* report AP-Secure client errors   */
+#define XPU4_CLERE_NS		BIT(30)	/* report AP-NonSecure client errors */
+#define XPU4_CLERE_QAD0		BIT(0)	/* report QAD0/APPS client errors   */
+#define XPU4_ESR_RMSK		0xfU
 
 /* Per region-group registers: base + off + 0x40 * n. */
 #define XPU4_RG_STRIDE		0x40U
@@ -151,6 +164,18 @@ static void xpu4_program_instance(const struct xpu4_instance *inst)
 				     inst->xpu_id, inst->umr_perm, rb);
 			}
 		}
+		if ((inst->flags & XPU4_INST_ERR_REPORT) != 0U) {
+			/*
+			 * Enable client error reporting so a violation by any
+			 * of AP-Secure / AP-NonSecure / QAD0 raises the XPU
+			 * malicious-summary IRQ (INTID 0xE3). RMW to preserve
+			 * bits XBL may already have set.
+			 */
+			uint32_t clere = mmio_read_32(inst->base + XPU4_CLERE);
+
+			clere |= (XPU4_CLERE_S | XPU4_CLERE_NS | XPU4_CLERE_QAD0);
+			mmio_write_32(inst->base + XPU4_CLERE, clere);
+		}
 	} else if ((inst->flags &
 		    (XPU4_INST_SET_UMR | XPU4_INST_SET_CFGOWNER)) != 0U) {
 		WARN("xpu4: id %u rev 0x%x < 4.2; UMR/CFGOWNER skipped\n",
@@ -169,4 +194,71 @@ void xpu4_apply_static_config(const struct xpu4_instance *insts,
 
 	dmbsy();
 	isb();
+}
+
+/*
+ * Minimal XPU v4 violation ISR.
+ *
+ * INTID 0xE3 (xpu4_malicious_summary_irq_apss) is a summary: the TCSR
+ * XPU4 malicious-interrupt status registers indicate which instance faulted.
+ * This handler logs the raw summary words (each set bit = one XPU instance,
+ * decode reg/bit via the downstream bit_mapping table), and for every
+ * config'd instance with a pending ESR it logs the ESR + faulting address and
+ * clears the ESR. It does NOT do full syndrome (SYNR0-2) decode - that is left
+ * to a later cut.
+ */
+static const struct xpu4_instance *g_xpu4_insts;
+static uint32_t g_xpu4_inst_count;
+
+void *xpu4_violation_isr(uint32_t id, void *ctx)
+{
+	uint32_t reg;
+	uint32_t i;
+	bool any = false;
+
+	(void)ctx;
+
+	/* Summary status: NORD_XPU4_TCSR_STATUS_BASE + 4*reg, num regs fixed. */
+	for (reg = 0U; reg < NORD_XPU4_TCSR_STATUS_NUM; reg++) {
+		uint32_t st = mmio_read_32(NORD_XPU4_TCSR_STATUS_BASE +
+					   (reg * 4U));
+		if (st != 0U) {
+			ERROR("xpu4: violation summary reg%u = 0x%08x (INTID 0x%x)\n",
+			      reg, st, id);
+			any = true;
+		}
+	}
+
+	/* Per config'd instance: log + clear any pending error status. */
+	for (i = 0U; i < g_xpu4_inst_count; i++) {
+		uintptr_t base = g_xpu4_insts[i].base;
+		uint32_t esr = mmio_read_32(base + XPU4_ESR) & XPU4_ESR_RMSK;
+
+		if (esr != 0U) {
+			ERROR("xpu4: id %u ESR=0x%x SYNAR=0x%08x%08x\n",
+			      g_xpu4_insts[i].xpu_id, esr,
+			      mmio_read_32(base + XPU4_SYNAR1),
+			      mmio_read_32(base + XPU4_SYNAR0));
+			/* Clear the error (write 0 to ESR). */
+			mmio_write_32(base + XPU4_ESR, 0U);
+			any = true;
+		}
+	}
+
+	if (!any) {
+		WARN("xpu4: summary IRQ 0x%x with no pending status\n", id);
+	}
+
+	dmbsy();
+	isb();
+	return NULL;
+}
+
+int xpu4_register_isr(const struct xpu4_instance *insts, uint32_t count)
+{
+	g_xpu4_insts = insts;
+	g_xpu4_inst_count = count;
+
+	return qti_interrupt_svc_register(NORD_INT_ID_XPU_SEC,
+					  xpu4_violation_isr, NULL);
 }

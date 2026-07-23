@@ -288,4 +288,12 @@
 #define NORD_XPU4_UMRPERMREG_OFFSET		0x408U
 #define NORD_XPU4_UMR_PERM_HLOS			0xC0000001U
 /*----------------------------------------------------------------------------*/
+/* XPU4 malicious-interrupt summary status (TCSR). The XPU_SEC summary IRQ    */
+/* (INTID 0xE3) is asserted when any XPU raises a violation; these registers  */
+/* (CPU view: TCSR base 0x01F40000 + 0x84080) identify which instance. Base   */
+/* + 4*reg, 3 status registers (num_tcsr_status_reg, target_info.json).       */
+/*----------------------------------------------------------------------------*/
+#define NORD_XPU4_TCSR_STATUS_BASE		0x01FC4080U
+#define NORD_XPU4_TCSR_STATUS_NUM		3U
+/*----------------------------------------------------------------------------*/
 #endif /* NORD_DEF_H */

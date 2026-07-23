@@ -32,6 +32,7 @@
 /* xpu4_instance flags */
 #define XPU4_INST_SET_UMR	0x1U	/* program UMRPERMREG from umr_perm */
 #define XPU4_INST_SET_CFGOWNER	0x2U	/* program CFGOWNER from cfg_owner */
+#define XPU4_INST_ERR_REPORT	0x4U	/* enable client error reporting (CLERE) */
 
 /*
  * struct xpu4_rg - one region group in an MPU instance.
@@ -76,6 +77,13 @@ struct xpu4_instance {
  */
 void xpu4_apply_static_config(const struct xpu4_instance *insts,
 			      uint32_t count);
+
+/*
+ * Register the XPU violation summary ISR (INTID 0xE3). @insts/@count are
+ * retained so the ISR can log/clear the error status of config'd instances.
+ * Returns 0 on success. Call after xpu4_apply_static_config().
+ */
+int xpu4_register_isr(const struct xpu4_instance *insts, uint32_t count);
 
 /*
  * Platform-provided compiled-in XPU4 policy (see nord/xpu_config.c).

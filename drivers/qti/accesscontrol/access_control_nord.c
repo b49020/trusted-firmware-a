@@ -29,6 +29,11 @@ void qti_accesscontrol_init(void)
 
 	xpu4_apply_static_config(cfg, count);
 	INFO("access-control: programmed %u XPU4 instance(s)\n", count);
+
+	/* Register the XPU violation summary ISR (INTID 0xE3). */
+	if (xpu4_register_isr(cfg, count) != 0) {
+		WARN("access-control: XPU violation ISR registration failed\n");
+	}
 }
 
 uint64_t qti_accesscontrol_mem_assign(const qti_accesscontrol_mem_t *mem_info,

@@ -50,7 +50,7 @@ static const struct xpu4_instance nord_xpu_cfg[] = {
 		.nrg      = 0U,
 		.umr_perm = AC_DOMAIN_AP_NS | AC_DOMAIN_APPS_SEC,
 		.cfg_owner = 0U,			/* QAD_APPS */
-		.flags    = XPU4_INST_SET_UMR,
+		.flags    = XPU4_INST_SET_UMR | XPU4_INST_ERR_REPORT,
 	},
 };
 
