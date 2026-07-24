@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
- * XPU v4 (MPU) static access-control programming. See xpu4.h.
+ * XPU v4 (MPU/RPU) static access-control programming. See xpu4.h.
  * Register offsets/fields verified against the downstream HALxPU4HwioGeneric.h
  * and IPCAT (nordschleife_2.0). Programming sequence mirrors xPU4ConfigureRGCfg.
  */
@@ -78,22 +78,26 @@ static bool xpu4_rev_ge_4_2(uint32_t rev)
 
 /* Program one region group (mirrors downstream xPU4ConfigureRGCfg). */
 static void xpu4_program_rg(uintptr_t base, uint32_t client_addr_width,
-			    const struct xpu4_rg *rg)
+			    bool is_mpu, const struct xpu4_rg *rg)
 {
 	uint32_t n = rg->rg_num;
 
-	/* Address window: low words always; high words only if >32-bit. */
-	mmio_write_32(xpu4_rg_reg(base, XPU4_RGCSAR0n, n),
-		      (uint32_t)(rg->start & 0xffffffffU));
-	mmio_write_32(xpu4_rg_reg(base, XPU4_RGCEAR0n, n),
-		      (uint32_t)(rg->end & 0xffffffffU));
+	/* Address window: MPU-shaped RGs only - RPU-type blocks gate access
+	 * inherent to the block, not a memory-mapped address range.
+	 */
+	if (is_mpu) {
+		mmio_write_32(xpu4_rg_reg(base, XPU4_RGCSAR0n, n),
+			      (uint32_t)(rg->start & 0xffffffffU));
+		mmio_write_32(xpu4_rg_reg(base, XPU4_RGCEAR0n, n),
+			      (uint32_t)(rg->end & 0xffffffffU));
 
-	/* CLIENT_ADDR_WIDTH is one less than the actual width. */
-	if (client_addr_width > 31U) {
-		mmio_write_32(xpu4_rg_reg(base, XPU4_RGCSAR1n, n),
-			      (uint32_t)(rg->start >> 32));
-		mmio_write_32(xpu4_rg_reg(base, XPU4_RGCEAR1n, n),
-			      (uint32_t)(rg->end >> 32));
+		/* CLIENT_ADDR_WIDTH is one less than the actual width. */
+		if (client_addr_width > 31U) {
+			mmio_write_32(xpu4_rg_reg(base, XPU4_RGCSAR1n, n),
+				      (uint32_t)(rg->start >> 32));
+			mmio_write_32(xpu4_rg_reg(base, XPU4_RGCEAR1n, n),
+				      (uint32_t)(rg->end >> 32));
+		}
 	}
 
 	/* Permission QAD vectors. */
@@ -120,13 +124,10 @@ static void xpu4_program_instance(const struct xpu4_instance *inst)
 	uint32_t rev;
 	uint32_t client_addr_width;
 	uint32_t hw_nrg;
+	bool is_mpu;
 	uint32_t i;
 
-	if (!xpu4_is_mpu(idr0)) {
-		WARN("xpu4: id %u @0x%lx not an MPU (IDR0=0x%x); skip\n",
-		     inst->xpu_id, inst->base, idr0);
-		return;
-	}
+	is_mpu = xpu4_is_mpu(idr0);
 
 	idr1 = mmio_read_32(inst->base + XPU4_IDR1);
 	rev = mmio_read_32(inst->base + XPU4_REV);
@@ -134,8 +135,8 @@ static void xpu4_program_instance(const struct xpu4_instance *inst)
 			    XPU4_IDR1_CLIENT_ADDR_WIDTH_SHFT;
 	hw_nrg = ((idr0 & XPU4_IDR0_NRG_BMSK) >> XPU4_IDR0_NRG_SHFT) + 1U;
 
-	VERBOSE("xpu4: id %u @0x%lx IDR0=0x%x nrg=%u rev=0x%x\n",
-		inst->xpu_id, inst->base, idr0, hw_nrg, rev);
+	VERBOSE("xpu4: id %u @0x%lx IDR0=0x%x mpu=%u nrg=%u rev=0x%x\n",
+		inst->xpu_id, inst->base, idr0, is_mpu, hw_nrg, rev);
 
 	/* Region groups. */
 	for (i = 0U; i < inst->nrg; i++) {
@@ -144,7 +145,8 @@ static void xpu4_program_instance(const struct xpu4_instance *inst)
 			     inst->xpu_id, inst->rgs[i].rg_num, hw_nrg);
 			continue;
 		}
-		xpu4_program_rg(inst->base, client_addr_width, &inst->rgs[i]);
+		xpu4_program_rg(inst->base, client_addr_width, is_mpu,
+				&inst->rgs[i]);
 	}
 
 	/* Unmapped-region permission + config owner are rev >= 4.2 features. */

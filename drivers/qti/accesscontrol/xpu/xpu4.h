@@ -3,14 +3,20 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
- * XPU v4 (MPU) static access-control programming for TF-A.
+ * XPU v4 (MPU/RPU) static access-control programming for TF-A.
  *
  * Ported from the downstream Qualcomm XPU v4 HAL (HALxPU4.c). This is the
  * TF-A-native, static "lock down assets" path: it programs a compiled-in set
- * of XPU4 MPU instances (region-group address windows + per-QAD read/write
- * permission vectors, and the unmapped-region permission) from a platform
- * config table. It does NOT implement the dynamic VM mem-assign SMC path or
- * the violation ISR.
+ * of XPU4 instances (region-group permission vectors, and for MPU-type
+ * instances the address window they gate; RPU-type instances have no address
+ * window - what's gated is inherent to the block, not memory-mapped) from a
+ * platform config table. It does NOT implement the dynamic VM mem-assign SMC
+ * path.
+ *
+ * Whether an instance's region groups are MPU-shaped (address window +
+ * perms) or RPU-shaped (perms only) is read from the instance's own IDR0 at
+ * programming time (mirrors downstream's xPU4DecodexPUType()), not declared
+ * by the config table - the same struct xpu4_rg/xpu4_instance describe both.
  *
  * Permission vectors (read_qads / write_qads / umr_perm) are written verbatim
  * to the RGRDRn / RGWRRn / UMRPERMREG registers, whose bit layout is:
@@ -35,9 +41,10 @@
 #define XPU4_INST_ERR_REPORT	0x4U	/* enable client error reporting (CLERE) */
 
 /*
- * struct xpu4_rg - one region group in an MPU instance.
+ * struct xpu4_rg - one region group in an XPU4 instance.
  * @rg_num:     hardware region-group index.
- * @start,@end: physical address window (SoC/CPU view; XPU-local == SoC on Nord).
+ * @start,@end: physical address window (SoC/CPU view; XPU-local == SoC on
+ *              Nord). Ignored for RPU-shaped instances (no address window).
  * @read_qads:  RGRDRn value (QAD read-permission vector).
  * @write_qads: RGWRRn value (QAD write-permission vector).
  * @flags:      XPU4_RG_*.
@@ -52,7 +59,7 @@ struct xpu4_rg {
 };
 
 /*
- * struct xpu4_instance - one XPU4 MPU hardware instance.
+ * struct xpu4_instance - one XPU4 hardware instance (MPU or RPU).
  * @base:      MMIO base address of the XPU4 block.
  * @xpu_id:    identifier (for logging only).
  * @rgs:       array of region groups to program (may be NULL if nrg == 0).
@@ -72,8 +79,8 @@ struct xpu4_instance {
 };
 
 /*
- * Program a compiled-in set of XPU4 MPU instances. Non-MPU or absent blocks
- * are skipped. Safe to call once during BL31 setup.
+ * Program a compiled-in set of XPU4 instances. Absent blocks are skipped.
+ * Safe to call once during BL31 setup.
  */
 void xpu4_apply_static_config(const struct xpu4_instance *insts,
 			      uint32_t count);

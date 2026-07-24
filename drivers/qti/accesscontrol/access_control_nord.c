@@ -3,9 +3,13 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
- * Nord access-control init: program the XPU v4 MPUs from the compiled-in
- * static policy (see xpu/nord/xpu_config.c). The dynamic VM memory-assign
- * SMC path is not implemented on Nord yet and remains a no-op.
+ * Nord access-control init: program the XPU v4 MPUs from the AC policy.
+ * Policy source is DRAM-based discovery (see xpu/nord/ac_config_parser.c)
+ * when available, falling back to the compiled-in static policy (see
+ * xpu/nord/xpu_config.c) otherwise - which today is always, since no XBL-
+ * side publisher for the DRAM policy's SMEM handoff exists yet. The dynamic
+ * VM memory-assign SMC path is not implemented on Nord yet and remains a
+ * no-op.
  */
 
 #include <stdint.h>
@@ -14,6 +18,7 @@
 
 #include <drivers/qti/accesscontrol/accesscontrol.h>
 
+#include <ac_config_parser.h>
 #include <xpu4.h>
 
 void qti_accesscontrol_init(void)
@@ -21,7 +26,12 @@ void qti_accesscontrol_init(void)
 	const struct xpu4_instance *cfg;
 	uint32_t count = 0U;
 
-	cfg = nord_xpu_get_config(&count);
+	cfg = ac_config_lookup_xpu_cfg(&count);
+	if ((cfg == NULL) || (count == 0U)) {
+		WARN("access-control: no DRAM AC config found; using compiled fallback\n");
+		cfg = nord_xpu_get_config(&count);
+	}
+
 	if ((cfg == NULL) || (count == 0U)) {
 		WARN("access-control: no Nord XPU config; skipping\n");
 		return;
