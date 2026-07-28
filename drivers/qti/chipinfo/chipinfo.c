@@ -41,6 +41,38 @@ enum chipinfo_family chipinfo_get_chip_family(void)
 	return chipinfo_ctxt.family_id;
 }
 
+bool chipinfo_is_part_disabled(enum chipinfo_part part, uint32_t part_idx)
+{
+	uint32_t i;
+
+	if (!chipinfo_ctxt.initialized) {
+		return false;
+	}
+
+	if ((part == CHIPINFO_PART_UNKNOWN) ||
+	    ((uint32_t)part >= CHIPINFO_NUM_PARTS)) {
+		return false;
+	}
+
+	if (part_idx == 0U) {
+		/* Flat array reflects the overall part fuse state reported by XBL. */
+		return chipinfo_ctxt.disabled_features[part] != 0U;
+	}
+
+	/* Search the per-instance table; assume present if absent or not found. */
+	for (i = 0U; i < chipinfo_ctxt.num_part_info; i++) {
+		const struct platforminfo_part_info *entry =
+			&chipinfo_ctxt.part_info[i];
+
+		if (((uint32_t)entry->part == (uint32_t)part) &&
+		    ((uint32_t)entry->instance == part_idx)) {
+			return entry->disabled != 0U;
+		}
+	}
+
+	return false;
+}
+
 enum chipinfo_result qti_chipinfo_init(void)
 {
 	struct platforminfo_smem *smem;
@@ -48,6 +80,7 @@ enum chipinfo_result qti_chipinfo_init(void)
 	uint32_t fmt;
 	uint32_t chip_id;
 	uint32_t chip_family;
+	uint32_t i;
 
 	/* Access the socinfo SMEM region populated by the boot firmware. */
 	smem = (struct platforminfo_smem *)smem_get_addr(SMEM_HW_SW_BUILD_ID,
@@ -57,11 +90,9 @@ enum chipinfo_result qti_chipinfo_init(void)
 	}
 
 	/*
-	 * Each SMEM format version defines a fixed set of fields; XBL only
-	 * populates fields up to the version it reports. Reading a field
-	 * added by a later version than smem->format would read data XBL
-	 * never wrote. chip_id and chip_version are defined from format
-	 * version 1; chip_family was added in format version 12.
+	 * XBL only populates fields up to the format version it reports, so
+	 * gate every field read on fmt. chip_id/version exist from v1;
+	 * chip_family from v12.
 	 */
 	fmt = smem->format;
 
@@ -70,11 +101,8 @@ enum chipinfo_result qti_chipinfo_init(void)
 	}
 
 	/*
-	 * The format version only says which fields the layout defines; it
-	 * does not prove the SMEM item is actually large enough to hold
-	 * them. Validate size against the corresponding PLATFORMINFO_SMEM_
-	 * SIZE_Vn constant before dereferencing, so a truncated SMEM item is
-	 * rejected instead of read out of bounds.
+	 * The format version says which fields the layout defines, not that the
+	 * item is large enough to hold them; validate size before dereferencing.
 	 */
 	if (size < PLATFORMINFO_SMEM_SIZE_V1) {
 		return CHIPINFO_ERROR_INVALID_DATA;
@@ -95,6 +123,49 @@ enum chipinfo_result qti_chipinfo_init(void)
 			chip_family = CHIPINFO_FAMILY_UNKNOWN;
 		}
 		chipinfo_ctxt.family_id = (enum chipinfo_family)chip_family;
+	}
+
+	/*
+	 * Disabled-features array: offset from the SMEM base, one uint32_t per
+	 * part, non-zero means disabled. Entries past num_parts stay present.
+	 */
+	if ((fmt >= PLATFORMINFO_FORMAT_VER_14) &&
+	    (size >= PLATFORMINFO_SMEM_SIZE_V14)) {
+		uint32_t offset = smem->disabled_features_array_offset;
+		uint32_t num = smem->num_parts;
+		const uint32_t *features;
+
+		if (num > CHIPINFO_NUM_PARTS) {
+			num = CHIPINFO_NUM_PARTS;
+		}
+
+		/* offset <= size first, so (size - offset) below cannot underflow. */
+		if ((offset != 0U) && (num != 0U) && (offset <= size) &&
+		    (num <= (size - offset) / sizeof(uint32_t))) {
+			features = (const uint32_t *)
+				   ((uintptr_t)smem + offset);
+			for (i = 0U; i < num; i++) {
+				chipinfo_ctxt.disabled_features[i] =
+					features[i];
+			}
+		}
+	}
+
+	/* Per-instance Qultivate table (format >= 23): point into SMEM, no copy. */
+	if ((fmt >= PLATFORMINFO_FORMAT_VER_23) &&
+	    (size >= PLATFORMINFO_SMEM_SIZE_V23)) {
+		uint32_t offset = smem->anPartInstancesOffset;
+		uint32_t num = smem->nNumPartInstances;
+
+		/* offset <= size first, so (size - offset) below cannot underflow. */
+		if ((offset != 0U) && (num != 0U) && (offset <= size) &&
+		    (num <= (size - offset) /
+			     sizeof(struct platforminfo_part_info))) {
+			chipinfo_ctxt.part_info =
+				(const struct platforminfo_part_info *)
+				((uintptr_t)smem + offset);
+			chipinfo_ctxt.num_part_info = num;
+		}
 	}
 
 	chipinfo_ctxt.initialized = true;
