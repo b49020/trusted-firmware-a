@@ -15,6 +15,7 @@
 #include <drivers/qti/accesscontrol/accesscontrol.h>
 #include <drivers/qti/accesscontrol/xpu.h>
 #include <drivers/qti/chipinfo/chipinfo.h>
+#include <drivers/qti/clock/clock.h>
 #include <drivers/qti/pdc/pdc.h>
 #include <drivers/qti/pwr_utils/pwr_utils.h>
 #include <drivers/qti/qtimer/qtimer.h>
@@ -109,7 +110,12 @@ void bl31_platform_setup(void)
 	if (qti_watchdog_init()) {
 		ERROR("Watchdog initialization error\n");
 	}
+
+	/* xPU static config needs clocks held; bracket its init. */
+	qti_clock_init();
 	qti_accesscontrol_init();
+	qti_clock_init_done();
+
 	plat_qti_bl31_setup_post();
 }
 
