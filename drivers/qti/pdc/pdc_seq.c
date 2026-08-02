@@ -40,6 +40,7 @@ static enum pdc_seq_result pdc_seq_internal_cfg(struct pdc_seq *seq)
 	return PDC_SEQ_SUCCESS;
 }
 
+#if !PDC_HAS_COMMON_SEQ
 static uint16_t __pdc_seq_copy_cmd_seq(uint8_t *pdc_base, uint16_t start_addr,
 				       uint8_t *cmds, uint16_t length)
 {
@@ -133,6 +134,7 @@ static enum pdc_seq_result pdc_seq_copy_cmd_seq(struct pdc_seq *seq)
 
 	return result;
 }
+#endif /* !PDC_HAS_COMMON_SEQ */
 
 static enum pdc_seq_result pdc_seq_init(struct pdc_seq *seq)
 {
