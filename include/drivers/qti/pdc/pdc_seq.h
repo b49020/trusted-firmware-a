@@ -30,7 +30,10 @@ struct pdc_seq_mode {
 	uint8_t		*cmds;
 	uint16_t	length;
 	uint16_t	mode_id;
-	int16_t		start_addr;	/* filled in at init */
+	int16_t		start_addr;	/* filled in at init, unused if
+					 * length == 0
+					 */
+	uint16_t	branch_mask;
 };
 
 /* Per-instance PDC sequencer descriptor */
