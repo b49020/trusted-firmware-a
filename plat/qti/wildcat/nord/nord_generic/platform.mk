@@ -138,3 +138,9 @@ include drivers/qti/cpucp/cpucp.mk
 
 # SMMU configuration.
 include drivers/qti/smmu/smmu.mk
+
+# PDC (Power Domain Controller) configuration. Nord has no TCS/wake-resource
+# path (PDC_ENABLE_TCS=0 in nord/pdc_config.mk); low-power-mode entry is driven
+# by a branch mask instead, so cmd_db is not needed here.
+include drivers/qti/pdc/pdc.mk
+
